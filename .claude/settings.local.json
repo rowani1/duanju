@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-female-novel-packaging/.\" knowledge/packaging/)",
+      "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-female-story-writing/.\" knowledge/writing/)",
+      "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-title-forging/.\" knowledge/title/)"
+    ]
+  }
+}

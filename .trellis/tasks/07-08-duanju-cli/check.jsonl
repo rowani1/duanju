@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/07-08-duanju-cli/research/knowledge-source.md", "reason": "检查产物是否符合 skill 协议：六包小节完整性、handoff 字段、字数预算、连续性检查、硬限制内置情况"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查 commands/core/stages/ui 分层职责是否清晰、数据流是否跨层一致"}
