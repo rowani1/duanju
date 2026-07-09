@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { generateText, streamText, type CoreMessage, type LanguageModel } from "ai";
 import { CliError } from "./errors.js";
-import { loadKnowledge } from "./knowledge.js";
+import { loadKnowledgeEx } from "./knowledge.js";
 import type { DuanjuProject } from "./project.js";
 
 /**
@@ -15,6 +15,8 @@ export interface StageContext {
   prior: Array<{ file: string; content: string }>;
   /** 用户重写要求 或 风险自检修订建议（追加到用户消息尾部） */
   reviseNote?: string;
+  /** 自定义知识库根目录（已由命令层解析校验的绝对路径）；缺省时只用内置知识库 */
+  customKnowledgeRoot?: string;
 }
 
 /**
@@ -167,14 +169,23 @@ function collectProblems(
   return { problems, handoff };
 }
 
-/** 组装三段式 system prompt */
-export function buildSystemPrompt(spec: StageSpec, ctx: StageContext): string {
-  return [
+/** 组装三段式 system prompt（含按文件回落的知识注入），并带出知识加载警告 */
+function assembleSystemPrompt(
+  spec: StageSpec,
+  ctx: StageContext,
+): { system: string; knowledgeWarnings: string[] } {
+  const knowledge = loadKnowledgeEx(spec.knowledgeFiles(ctx), ctx.customKnowledgeRoot);
+  const system = [
     spec.rolePrompt(ctx),
-    "以下是本步骤依赖的知识库原文，输出必须遵循其中的方法与规则：\n\n" +
-      loadKnowledge(spec.knowledgeFiles(ctx)),
+    "以下是本步骤依赖的知识库原文，输出必须遵循其中的方法与规则：\n\n" + knowledge.content,
     spec.outputSpecPrompt(ctx),
   ].join("\n\n---\n\n");
+  return { system, knowledgeWarnings: knowledge.warnings };
+}
+
+/** 组装三段式 system prompt */
+export function buildSystemPrompt(spec: StageSpec, ctx: StageContext): string {
+  return assembleSystemPrompt(spec, ctx).system;
 }
 
 /** 组装用户消息（含修订要求追加） */
@@ -229,7 +240,7 @@ export async function runStage(
   ctx: StageContext,
   opts: RunStageOptions = {},
 ): Promise<StageResult> {
-  const system = buildSystemPrompt(spec, ctx);
+  const { system, knowledgeWarnings } = assembleSystemPrompt(spec, ctx);
   const userPrompt = buildUserPrompt(spec, ctx);
   const messages: CoreMessage[] = [{ role: "user", content: userPrompt }];
 
@@ -257,7 +268,10 @@ export async function runStage(
     throw new StageValidationError(spec.label, problems);
   }
 
-  const warnings = spec.warnValidate ? spec.warnValidate(markdown, handoff, ctx) : [];
+  const warnings = [
+    ...knowledgeWarnings,
+    ...(spec.warnValidate ? spec.warnValidate(markdown, handoff, ctx) : []),
+  ];
 
   const file = path.join(ctx.projectDir, spec.outputFile);
   mkdirSync(path.dirname(file), { recursive: true });

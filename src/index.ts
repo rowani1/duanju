@@ -51,8 +51,9 @@ program
   .argument("[目录]", "项目目录，默认当前目录")
   .option("--force", "忽略已有产物，全部重新生成")
   .option("--yes", "跳过逐包交互确认，自动接受生成结果")
-  .action(async (dir: string | undefined, options: { force?: boolean; yes?: boolean }) => {
-    await runPackage(dir, { force: options.force, yes: options.yes });
+  .option("--knowledge <路径>", "自定义知识库目录（按文件覆盖内置知识库，相对路径相对当前目录）")
+  .action(async (dir: string | undefined, options: { force?: boolean; yes?: boolean; knowledge?: string }) => {
+    await runPackage(dir, { force: options.force, yes: options.yes, knowledge: options.knowledge });
   });
 
 program
@@ -61,8 +62,9 @@ program
   .argument("[目录]", "项目目录，默认当前目录")
   .option("--force", "忽略已有 titles.md，重新生成")
   .option("--yes", "跳过交互选择，自动选定第一梯队第 1 个候选")
-  .action(async (dir: string | undefined, options: { force?: boolean; yes?: boolean }) => {
-    await runTitle(dir, { force: options.force, yes: options.yes });
+  .option("--knowledge <路径>", "自定义知识库目录（按文件覆盖内置知识库，相对路径相对当前目录）")
+  .action(async (dir: string | undefined, options: { force?: boolean; yes?: boolean; knowledge?: string }) => {
+    await runTitle(dir, { force: options.force, yes: options.yes, knowledge: options.knowledge });
   });
 
 program
@@ -70,7 +72,8 @@ program
   .description("逐章生成正文（流式输出）；带章号则重写指定章（覆盖前自动备份）")
   .argument("[章号]", "要重写的章号；省略则写下一未完成章")
   .option("--yes", "跳过字数偏差询问，自动接受")
-  .action(async (num: string | undefined, options: { yes?: boolean }) => {
+  .option("--knowledge <路径>", "自定义知识库目录（按文件覆盖内置知识库，相对路径相对当前目录）")
+  .action(async (num: string | undefined, options: { yes?: boolean; knowledge?: string }) => {
     let chapter: number | undefined;
     if (num !== undefined) {
       chapter = Number(num);
@@ -78,7 +81,7 @@ program
         throw new CliError("章号必须是正整数，如：duanju write 3");
       }
     }
-    await runWrite(undefined, { chapter, yes: options.yes });
+    await runWrite(undefined, { chapter, yes: options.yes, knowledge: options.knowledge });
   });
 
 program
@@ -88,7 +91,8 @@ program
   .option("--mode <模式>", `修订模式：${REVISION_MODES.join(" / ")}`)
   .option("--note <要求>", "补充修订要求（可选）")
   .option("--yes", "跳过交互（不询问是否更新角色状态快照）")
-  .action(async (num: string, options: { mode?: string; note?: string; yes?: boolean }) => {
+  .option("--knowledge <路径>", "自定义知识库目录（按文件覆盖内置知识库，相对路径相对当前目录）")
+  .action(async (num: string, options: { mode?: string; note?: string; yes?: boolean; knowledge?: string }) => {
     const chapter = Number(num);
     if (!Number.isInteger(chapter) || chapter < 1) {
       throw new CliError("章号必须是正整数，如：duanju revise 3 --mode 润色");
@@ -97,6 +101,7 @@ program
       mode: options.mode,
       note: options.note,
       yes: options.yes,
+      knowledge: options.knowledge,
     });
   });
 
@@ -124,7 +129,8 @@ program
   .argument("[题材]", "题材一句话；当前目录已是项目时可省略")
   .option("--auto", "确认启动全自动模式（必填，防止误触发连续调用模型）")
   .option("--words <字数>", "单章目标字数，透传给 write")
-  .action(async (idea: string | undefined, options: { auto?: boolean; words?: string }) => {
+  .option("--knowledge <路径>", "自定义知识库目录（按文件覆盖内置知识库，相对路径相对当前目录）")
+  .action(async (idea: string | undefined, options: { auto?: boolean; words?: string; knowledge?: string }) => {
     if (!options.auto) {
       console.log(
         "duanju run 是全自动模式：不加交互确认地连续调用模型，串联 new → package → title → write 全部章 → export，会产生持续的 API 费用。",
@@ -140,7 +146,7 @@ program
         throw new CliError(`目标字数必须是不小于 ${CHAPTER_MIN_CHARS} 的整数，如：--words 2500`);
       }
     }
-    await runAuto(idea, undefined, { words });
+    await runAuto(idea, undefined, { words, knowledge: options.knowledge });
   });
 
 /** 不带子命令时的中文帮助概览：典型流程 + 命令清单（描述取自各命令注册，单一来源） */

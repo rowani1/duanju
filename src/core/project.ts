@@ -27,6 +27,8 @@ export interface DuanjuProject {
   handoff?: Partial<HandoffFields>;
   selectedTitle?: string;
   modelOverride?: ModelOverride;
+  /** 自定义知识库根目录（相对路径相对项目目录；按文件覆盖内置 knowledge/） */
+  knowledgePath?: string;
   createdAt: string;
 }
 

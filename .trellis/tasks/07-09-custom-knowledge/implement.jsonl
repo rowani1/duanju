@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "四层依赖方向铁律：commands 无 fs 细节、core 无终端输出、常量归属 project.ts——本任务改 knowledge/llm/commands 三层必须遵守"}
+{"file": ".trellis/spec/backend/pipeline-contracts.md", "reason": "StageContext 契约与三段式 prompt 组装——customKnowledgeRoot 透传要嵌入既有契约不破坏依赖方向"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "CliError 规约：中文+下一步建议、校验失败不落盘——新增路径校验错误必须遵守"}

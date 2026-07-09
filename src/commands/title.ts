@@ -20,6 +20,7 @@ import {
   type TitleCandidates,
 } from "../stages/title.js";
 import { assertNotCancelled } from "../ui/prompts.js";
+import { setupCustomKnowledge } from "./custom-knowledge.js";
 
 const CUSTOM_OPTION = "__custom__";
 
@@ -31,6 +32,8 @@ export interface TitleOptions {
    * 调用约定：duanju run 全自动模式（M7）与测试注入均以 yes: true 复用本命令。
    */
   yes?: boolean;
+  /** 自定义知识库目录（CLI --knowledge，相对路径相对当前工作目录） */
+  knowledge?: string;
 }
 
 /** 交互选定：两梯队候选 + 手动输入兜底 */
@@ -83,6 +86,9 @@ export async function runTitle(
   console.log(`题材：${project.idea}`);
   console.log("");
 
+  // 前置解析并校验自定义知识库路径（续传分支也必须校验，坏路径不允许静默跳过）
+  const custom = setupCustomKnowledge(opts.knowledge, projectDir, project);
+
   let titlesContent: string;
   const existing = opts.force ? null : readArtifact(projectDir, TITLES_FILE);
   if (existing !== null) {
@@ -98,7 +104,8 @@ export async function runTitle(
         }),
       );
     console.log(`正在生成书名候选（两梯队各 10 个）…`);
-    const ctx: StageContext = { projectDir, project, prior: [] };
+    const ctx: StageContext = { projectDir, project, prior: [], customKnowledgeRoot: custom.root };
+    custom.announce(TITLE_STAGE.knowledgeFiles(ctx));
     const result = await runStage(llm, TITLE_STAGE, ctx);
     console.log(`${TITLES_FILE} 已生成${result.retried ? "（经一次自动重试）" : ""}。`);
     for (const warning of result.warnings) {

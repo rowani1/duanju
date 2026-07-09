@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { LanguageModel } from "ai";
@@ -18,6 +18,12 @@ export interface LlmConfig {
 }
 
 export type PartialLlmConfig = Partial<LlmConfig>;
+
+/** 全局配置文件（~/.duanju/config.json）的完整形态：模型配置 + 可选自定义知识库路径 */
+export interface GlobalConfig extends PartialLlmConfig {
+  /** 自定义知识库根目录（必须为绝对路径） */
+  knowledgePath?: string;
+}
 
 /** 项目侧覆盖：只允许 provider/model/baseURL，apiKey 绝不落项目目录 */
 export type ModelOverride = Pick<PartialLlmConfig, "provider" | "model" | "baseURL">;
@@ -107,12 +113,12 @@ export function globalConfigPath(homeDir: string = os.homedir()): string {
 }
 
 /** 读取全局配置；不存在或损坏时返回 null */
-export function readGlobalConfig(homeDir: string = os.homedir()): PartialLlmConfig | null {
+export function readGlobalConfig(homeDir: string = os.homedir()): GlobalConfig | null {
   const file = globalConfigPath(homeDir);
   if (!existsSync(file)) return null;
   try {
     const parsed: unknown = JSON.parse(readFileSync(file, "utf-8"));
-    if (parsed && typeof parsed === "object") return parsed as PartialLlmConfig;
+    if (parsed && typeof parsed === "object") return parsed as GlobalConfig;
     return null;
   } catch {
     return null;
@@ -120,8 +126,76 @@ export function readGlobalConfig(homeDir: string = os.homedir()): PartialLlmConf
 }
 
 /** 写入全局配置（目录不存在则创建） */
-export function writeGlobalConfig(config: LlmConfig, homeDir: string = os.homedir()): void {
+export function writeGlobalConfig(
+  config: LlmConfig & Pick<GlobalConfig, "knowledgePath">,
+  homeDir: string = os.homedir(),
+): void {
   const file = globalConfigPath(homeDir);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(config, null, 2) + "\n", "utf-8");
+}
+
+/** 路径存在且是目录 */
+function isDirectory(p: string): boolean {
+  return existsSync(p) && statSync(p).isDirectory();
+}
+
+/** 全局配置中知识库路径的校验（config 向导用）：合法返回 undefined，否则返回中文错误提示 */
+export function validateGlobalKnowledgePath(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!path.isAbsolute(trimmed)) return "全局配置中的知识库路径必须为绝对路径";
+  if (!isDirectory(trimmed)) return `目录不存在：${trimmed}`;
+  return undefined;
+}
+
+export interface KnowledgePathSources {
+  /** 命令行参数 --knowledge（相对路径相对当前工作目录） */
+  cliArg?: string;
+  /** 项目目录（duanju.json 中相对路径的解析基准） */
+  projectDir: string;
+  /** 项目 duanju.json 的 knowledgePath */
+  projectValue?: string;
+  /** 全局 ~/.duanju/config.json 的 knowledgePath（必须为绝对路径） */
+  globalValue?: string;
+  /** 当前工作目录（默认 process.cwd()，供测试注入） */
+  cwd?: string;
+}
+
+/**
+ * 解析自定义知识库根目录，优先级：命令行参数 > 项目配置 > 全局配置。
+ * 命中后校验目录存在，不存在抛 CliError（含完整路径与配置来源）；
+ * 三级均未配置时返回 undefined（行为与未启用该特性完全一致）。
+ */
+export function resolveKnowledgePath(sources: KnowledgePathSources): string | undefined {
+  const { cliArg, projectDir, projectValue, globalValue, cwd = process.cwd() } = sources;
+
+  let resolved: string;
+  let origin: string;
+  if (cliArg?.trim()) {
+    resolved = path.resolve(cwd, cliArg.trim());
+    origin = "命令行参数";
+  } else if (projectValue?.trim()) {
+    resolved = path.resolve(projectDir, projectValue.trim());
+    origin = "项目配置";
+  } else if (globalValue?.trim()) {
+    const value = globalValue.trim();
+    if (!path.isAbsolute(value)) {
+      throw new CliError(
+        `全局配置中的 knowledgePath 必须为绝对路径，当前值：${value}。` +
+          "请运行 duanju config 重新配置（或手动修改 ~/.duanju/config.json）；如需相对路径，请改在项目 duanju.json 中配置 knowledgePath。",
+      );
+    }
+    resolved = value;
+    origin = "全局配置";
+  } else {
+    return undefined;
+  }
+
+  if (!isDirectory(resolved)) {
+    throw new CliError(
+      `自定义知识库目录不存在：${resolved}（来源：${origin}）。` +
+        "请检查路径是否正确或先创建该目录；不配置 knowledgePath 时将使用内置知识库。",
+    );
+  }
+  return resolved;
 }

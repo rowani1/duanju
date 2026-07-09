@@ -43,3 +43,4 @@ Not applicable (CLI, no server). The CLI equivalent: every failure path prints C
 - **Throwing bare `Error` for user-level failures** → renders as "意外错误", loses the guidance line. Use `CliError`.
 - **Printing errors inside `core/`** — core throws, commands/entry print.
 - **Writing artifacts before validation passes** — breaks resume semantics (see rule 2).
+- **Validating inputs only inside the generation branch** — commands with resume/skip branches (e.g. `title` when `titles.md` exists) silently bypass input validation if it lives in the generate-only path. Rule: resolve-and-validate user-supplied inputs (`--knowledge` path, config values) in the command's entry preamble, BEFORE any branch. Found in v0.2.0 smoke: bad `--knowledge` path was silently ignored on the resume branch.

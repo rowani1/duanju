@@ -23,6 +23,7 @@ import {
 } from "../stages/revision.js";
 import { countProseChars, SNAPSHOT_FILE, snapshotStage } from "../stages/writing.js";
 import { assertNotCancelled } from "../ui/prompts.js";
+import { setupCustomKnowledge } from "./custom-knowledge.js";
 
 export interface ReviseOptions {
   /** 修订模式，必须是四模式之一（改写 / 扩写 / 润色 / 重写节奏） */
@@ -34,6 +35,8 @@ export interface ReviseOptions {
    * 调用约定：测试注入以 yes: true 复用本命令。
    */
   yes?: boolean;
+  /** 自定义知识库目录（CLI --knowledge，相对路径相对当前工作目录） */
+  knowledge?: string;
 }
 
 /**
@@ -50,6 +53,7 @@ export async function runRevise(
   const projectDir = path.resolve(dir);
   const project = readProject(projectDir);
   requireMainCategory(project);
+  const custom = setupCustomKnowledge(opts.knowledge, projectDir, project);
 
   const mode = opts.mode?.trim() ?? "";
   if (!isRevisionMode(mode)) {
@@ -102,8 +106,10 @@ export async function runRevise(
 
   console.log(`正在按「${mode}」修订第 ${chapter} 章（原文约 ${originalChars} 字，流式输出）…`);
   console.log("");
-  const ctx: StageContext = { projectDir, project, prior: [] };
-  const result = await runStage(llm, revisionStage(materials), ctx, {
+  const ctx: StageContext = { projectDir, project, prior: [], customKnowledgeRoot: custom.root };
+  const revSpec = revisionStage(materials);
+  custom.announce(revSpec.knowledgeFiles(ctx));
+  const result = await runStage(llm, revSpec, ctx, {
     onDelta: (text) => process.stdout.write(text),
     onRetry: (problems) =>
       process.stdout.write(`\n\n[输出不合格，自动重试：${problems.join("；")}]\n\n`),
@@ -140,16 +146,17 @@ export async function runRevise(
   if (!update) return;
 
   console.log("正在更新角色状态快照…");
-  const snapCtx: StageContext = { projectDir, project, prior: [] };
-  await runStage(
-    llm,
-    snapshotStage({
-      chapter,
-      persona,
-      previousSnapshot: readArtifact(projectDir, SNAPSHOT_FILE),
-      chapterText: result.content,
-    }),
-    snapCtx,
-  );
+  const snapCtx: StageContext = { projectDir, project, prior: [], customKnowledgeRoot: custom.root };
+  const snapSpec = snapshotStage({
+    chapter,
+    persona,
+    previousSnapshot: readArtifact(projectDir, SNAPSHOT_FILE),
+    chapterText: result.content,
+  });
+  custom.announce(snapSpec.knowledgeFiles(snapCtx));
+  const snapResult = await runStage(llm, snapSpec, snapCtx);
+  for (const warning of snapResult.warnings) {
+    console.log(`警告：${warning}`);
+  }
   console.log(`${SNAPSHOT_FILE} 已更新。`);
 }

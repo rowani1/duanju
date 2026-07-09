@@ -23,6 +23,7 @@ import {
   stageByOutputFile,
 } from "../stages/packaging.js";
 import { assertNotCancelled } from "../ui/prompts.js";
+import { setupCustomKnowledge, type CustomKnowledge } from "./custom-knowledge.js";
 
 export interface PackageOptions {
   /** 忽略已有产物，七步全部重新生成 */
@@ -32,6 +33,8 @@ export interface PackageOptions {
    * 调用约定：duanju run 全自动模式（M7）与测试注入均以 yes: true 复用本命令。
    */
   yes?: boolean;
+  /** 自定义知识库目录（CLI --knowledge，相对路径相对当前工作目录） */
+  knowledge?: string;
 }
 
 interface Artifact {
@@ -59,12 +62,20 @@ async function generateWithConfirm(
   project: DuanjuProject,
   prior: Artifact[],
   opts: PackageOptions,
+  custom: CustomKnowledge,
   initialNote?: string,
 ): Promise<string> {
   let reviseNote = initialNote;
 
   for (;;) {
-    const ctx: StageContext = { projectDir, project, prior, reviseNote };
+    const ctx: StageContext = {
+      projectDir,
+      project,
+      prior,
+      reviseNote,
+      customKnowledgeRoot: custom.root,
+    };
+    custom.announce(spec.knowledgeFiles(ctx));
     const spinner = opts.yes ? null : p.spinner();
     if (spinner) {
       spinner.start(`正在生成 ${spec.outputFile}…`);
@@ -135,6 +146,7 @@ async function applyRiskRevisions(
   project: DuanjuProject,
   artifacts: Artifact[],
   opts: PackageOptions,
+  custom: CustomKnowledge,
 ): Promise<void> {
   const revise = parseCommentBlock(riskContent, REVISE_BLOCK_TAG) ?? {};
   const entries = Object.entries(revise).filter(([file]) =>
@@ -170,6 +182,7 @@ async function applyRiskRevisions(
       project,
       prior,
       opts,
+      custom,
       `风险自检指出：${note}。请在保持整体设定一致的前提下修订。`,
     );
     artifacts[index] = { file, content };
@@ -187,6 +200,7 @@ export async function runPackage(
 ): Promise<void> {
   const projectDir = path.resolve(dir);
   const project = readProject(projectDir);
+  const custom = setupCustomKnowledge(opts.knowledge, projectDir, project);
   const llm =
     model ??
     createModel(
@@ -214,7 +228,7 @@ export async function runPackage(
       absorbHandoff(projectDir, project, parseCommentBlock(content, "handoff") ?? {});
       console.log(`${spec.outputFile} 已存在，跳过（续传；如需重做请加 --force）。`);
     } else {
-      content = await generateWithConfirm(llm, spec, projectDir, project, [...artifacts], opts);
+      content = await generateWithConfirm(llm, spec, projectDir, project, [...artifacts], opts, custom);
       if (spec.outputFile === RISK_REPORT_FILE) riskFreshlyGenerated = true;
     }
 
@@ -226,7 +240,7 @@ export async function runPackage(
   }
 
   if (riskContent && riskFreshlyGenerated) {
-    await applyRiskRevisions(llm, riskContent, projectDir, project, artifacts, opts);
+    await applyRiskRevisions(llm, riskContent, projectDir, project, artifacts, opts, custom);
   }
 
   console.log("");

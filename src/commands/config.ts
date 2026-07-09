@@ -4,6 +4,7 @@ import {
   createModel,
   writeGlobalConfig,
   globalConfigPath,
+  validateGlobalKnowledgePath,
   type LlmConfig,
   type ProviderName,
 } from "../core/llm.js";
@@ -79,6 +80,19 @@ export async function runConfigWizard(): Promise<void> {
     ).trim();
   }
 
+  // 可选：自定义知识库路径（全局配置只接受绝对路径；留空使用内置知识库）
+  const knowledgePath = assertNotCancelled(
+    await p.text({
+      message: "自定义知识库目录（可选，绝对路径，按文件覆盖内置知识库；留空跳过）",
+      defaultValue: "",
+      validate: (v) => {
+        const trimmed = v?.trim();
+        if (!trimmed) return undefined;
+        return validateGlobalKnowledgePath(trimmed);
+      },
+    }),
+  ).trim();
+
   const config: LlmConfig = { provider, model, apiKey, ...(baseURL ? { baseURL } : {}) };
 
   const spinner = p.spinner();
@@ -104,6 +118,6 @@ export async function runConfigWizard(): Promise<void> {
     return;
   }
 
-  writeGlobalConfig(config);
+  writeGlobalConfig({ ...config, ...(knowledgePath ? { knowledgePath } : {}) });
   p.outro(`配置已保存到 ${globalConfigPath()}`);
 }

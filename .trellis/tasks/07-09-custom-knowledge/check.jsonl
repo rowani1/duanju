@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查依据：禁止模式（any/硬编码文件名/隐藏全局状态）、测试要求（回落矩阵/prompt 内容断言/回归零改动）"}
+{"file": ".trellis/spec/backend/pipeline-contracts.md", "reason": "检查 customRoot 透传是否破坏管线契约与依赖方向、未配置时与 v0.1.1 行为一致性"}

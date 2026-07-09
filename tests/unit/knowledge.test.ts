@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   categorySegment,
+  findCustomHits,
   knowledgeRoot,
   loadKnowledge,
+  loadKnowledgeEx,
   MAIN_CATEGORIES,
 } from "../../src/core/knowledge.js";
 import type { StageContext, StageSpec } from "../../src/core/pipeline.js";
 import { PACKAGING_STAGES } from "../../src/stages/packaging.js";
 import { TITLE_STAGE } from "../../src/stages/title.js";
 import { chapterStage, snapshotStage } from "../../src/stages/writing.js";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 describe("主类 → 文件名段映射", () => {
@@ -98,5 +101,84 @@ describe("Stage 知识声明 × 四大主类：文件必须都在 knowledge/ 中
         ).toBe(true);
       }
     }
+  });
+});
+
+describe("loadKnowledgeEx 自定义知识库回落矩阵", () => {
+  const withCustomRoot = (fn: (root: string) => void): void => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "duanju-custom-"));
+    try {
+      fn(root);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("同构文件命中时使用自定义版并记入 customHits", () => {
+    withCustomRoot((root) => {
+      mkdirSync(path.join(root, "title", "references"), { recursive: true });
+      writeFileSync(
+        path.join(root, "title", "references", "keyword-bank.md"),
+        "CUSTOM-KEYWORD-MARK 自定义词库",
+        "utf-8",
+      );
+      const result = loadKnowledgeEx(
+        ["title/references/keyword-bank.md", "packaging/SKILL.md"],
+        root,
+      );
+      expect(result.content).toContain("CUSTOM-KEYWORD-MARK");
+      expect(result.customHits).toEqual(["title/references/keyword-bank.md"]);
+      expect(result.warnings).toEqual([]);
+      // 未命中的文件回落内置版
+      expect(result.content).toContain("===== 知识文件：packaging/SKILL.md =====");
+    });
+  });
+
+  it("未命中时全部回落内置，customHits 为空", () => {
+    withCustomRoot((root) => {
+      const result = loadKnowledgeEx(["packaging/SKILL.md"], root);
+      expect(result.customHits).toEqual([]);
+      expect(result.content).toBe(loadKnowledge(["packaging/SKILL.md"]));
+    });
+  });
+
+  it("自定义文件为空时收集警告并按空内容注入", () => {
+    withCustomRoot((root) => {
+      mkdirSync(path.join(root, "packaging"), { recursive: true });
+      writeFileSync(path.join(root, "packaging", "SKILL.md"), "   \n", "utf-8");
+      const result = loadKnowledgeEx(["packaging/SKILL.md"], root);
+      expect(result.customHits).toEqual(["packaging/SKILL.md"]);
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0]).toMatch(/自定义知识文件为空.*packaging\/SKILL\.md/);
+      expect(result.content).toBe("===== 知识文件：packaging/SKILL.md =====\n\n");
+    });
+  });
+
+  it("自定义目录中的多余文件被忽略", () => {
+    withCustomRoot((root) => {
+      writeFileSync(path.join(root, "多余文件.md"), "内置不认识", "utf-8");
+      const result = loadKnowledgeEx(["packaging/SKILL.md"], root);
+      expect(result.customHits).toEqual([]);
+      expect(result.content).not.toContain("内置不认识");
+    });
+  });
+
+  it("不传 customRoot 时行为与既有 loadKnowledge 完全一致", () => {
+    const files = ["packaging/SKILL.md", "title/SKILL.md"];
+    const result = loadKnowledgeEx(files);
+    expect(result.customHits).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    expect(result.content).toBe(loadKnowledge(files));
+  });
+
+  it("findCustomHits 仅探测存在性，保持 files 顺序", () => {
+    withCustomRoot((root) => {
+      mkdirSync(path.join(root, "title", "references"), { recursive: true });
+      writeFileSync(path.join(root, "title", "references", "keyword-bank.md"), "x", "utf-8");
+      expect(
+        findCustomHits(["packaging/SKILL.md", "title/references/keyword-bank.md"], root),
+      ).toEqual(["title/references/keyword-bank.md"]);
+      expect(findCustomHits(["title/references/keyword-bank.md"], undefined)).toEqual([]);
+    });
   });
 });

@@ -21,6 +21,8 @@ import { runWrite } from "./write.js";
 export interface RunOptions {
   /** 单章目标字数，透传给 write */
   words?: number;
+  /** 自定义知识库目录（CLI --knowledge），透传给 package/title/write 全部子步骤 */
+  knowledge?: string;
 }
 
 const STEP_TOTAL = 5;
@@ -102,13 +104,13 @@ export async function runAuto(
       );
 
     banner(2, "生成六包（package --yes）");
-    await runPackage(projectDir, { yes: true }, llm);
+    await runPackage(projectDir, { yes: true, knowledge: opts.knowledge }, llm);
 
     banner(3, "锻造书名（title --yes，自动选第一梯队第 1）");
     if (readProject(projectDir).selectedTitle) {
       console.log("书名已选定，跳过（续传）。");
     } else {
-      await runTitle(projectDir, { yes: true }, llm);
+      await runTitle(projectDir, { yes: true, knowledge: opts.knowledge }, llm);
     }
 
     banner(4, "逐章写作（write --yes）");
@@ -123,7 +125,7 @@ export async function runAuto(
       // 进度按已写章数展示；具体写第几章由 runWrite 选定（首个未完成章）并自行播报
       console.log("");
       console.log(`--- 章节进度 ${listChapters(projectDir).length}/${totalChapters}，写下一未完成章 ---`);
-      await runWrite(projectDir, { yes: true, words: opts.words }, llm);
+      await runWrite(projectDir, { yes: true, words: opts.words, knowledge: opts.knowledge }, llm);
     }
     console.log(`全部 ${totalChapters} 章已完成。`);
 

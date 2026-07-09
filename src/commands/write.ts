@@ -28,6 +28,7 @@ import {
   type ChapterMaterials,
 } from "../stages/writing.js";
 import { assertNotCancelled } from "../ui/prompts.js";
+import { setupCustomKnowledge } from "./custom-knowledge.js";
 
 export interface WriteOptions {
   /** 指定章号 = 重写该章（覆盖前自动备份）；省略 = 写下一未完成章 */
@@ -39,6 +40,8 @@ export interface WriteOptions {
   yes?: boolean;
   /** 单章目标字数覆盖（duanju run --words 透传）；省略用默认 CHAPTER_TARGET_CHARS */
   words?: number;
+  /** 自定义知识库目录（CLI --knowledge，相对路径相对当前工作目录） */
+  knowledge?: string;
 }
 
 /** 字数允许区间文本，如 "2550-3450" */
@@ -137,6 +140,7 @@ export async function runWrite(
     );
 
   const target = opts.words ?? CHAPTER_TARGET_CHARS;
+  const custom = setupCustomKnowledge(opts.knowledge, projectDir, project);
   const materials: ChapterMaterials = {
     chapter: n,
     outline,
@@ -154,13 +158,24 @@ export async function runWrite(
   for (;;) {
     console.log(`正在生成第 ${n} 章正文（目标约 ${target} 字，流式输出）…`);
     console.log("");
-    const ctx: StageContext = { projectDir, project, prior: [], reviseNote };
-    const result = await runStage(llm, chapterStage(materials), ctx, {
+    const ctx: StageContext = {
+      projectDir,
+      project,
+      prior: [],
+      reviseNote,
+      customKnowledgeRoot: custom.root,
+    };
+    const spec = chapterStage(materials);
+    custom.announce(spec.knowledgeFiles(ctx));
+    const result = await runStage(llm, spec, ctx, {
       onDelta: (text) => process.stdout.write(text),
       onRetry: (problems) =>
         process.stdout.write(`\n\n[输出不合格，自动重试：${problems.join("；")}]\n\n`),
     });
     process.stdout.write("\n\n");
+    for (const warning of result.warnings) {
+      console.log(`警告：${warning}`);
+    }
     content = result.content;
     chars = countProseChars(content);
 
@@ -194,12 +209,23 @@ export async function runWrite(
   // 调用 B：按 character-state-tracker 模板更新角色状态快照（仅顺序写作时）
   if (snapshotInPlay) {
     console.log("正在更新角色状态快照…");
-    const snapCtx: StageContext = { projectDir, project, prior: [] };
-    await runStage(
-      llm,
-      snapshotStage({ chapter: n, persona, previousSnapshot: snapshot, chapterText: content }),
-      snapCtx,
-    );
+    const snapCtx: StageContext = {
+      projectDir,
+      project,
+      prior: [],
+      customKnowledgeRoot: custom.root,
+    };
+    const snapSpec = snapshotStage({
+      chapter: n,
+      persona,
+      previousSnapshot: snapshot,
+      chapterText: content,
+    });
+    custom.announce(snapSpec.knowledgeFiles(snapCtx));
+    const snapResult = await runStage(llm, snapSpec, snapCtx);
+    for (const warning of snapResult.warnings) {
+      console.log(`警告：${warning}`);
+    }
     console.log(`${SNAPSHOT_FILE} 已更新。`);
   } else {
     console.log(
