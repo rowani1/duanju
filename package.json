@@ -1,14 +1,15 @@
 {
   "name": "duanju-cli",
   "version": "0.1.0",
-  "description": "短剧向女频短故事生成命令行工具",
+  "description": "短剧向女频短故事创作命令行工具：一句话题材 → 选题包装 → 书名锻造 → 逐章正文 → 投稿导出，内置总裁/古言/女频现实情感/年代穿越四大主类创作方法论，支持 OpenAI / Claude / Gemini / DeepSeek 等模型",
   "type": "module",
   "bin": {
     "duanju": "./dist/index.js"
   },
   "files": [
     "dist",
-    "knowledge"
+    "knowledge",
+    "README.md"
   ],
   "engines": {
     "node": ">=20"
@@ -16,14 +17,27 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build && vitest run"
   },
   "keywords": [
     "duanju",
-    "cli",
-    "writing"
+    "短剧",
+    "网文",
+    "女频",
+    "小说",
+    "写作",
+    "AI写作",
+    "webnovel",
+    "novel",
+    "writing",
+    "cli"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-name/duanju-cli.git"
+  },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
     "@ai-sdk/google": "^1.2.19",

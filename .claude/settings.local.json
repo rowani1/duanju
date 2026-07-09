@@ -4,7 +4,19 @@
       "Bash(python *)",
       "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-female-novel-packaging/.\" knowledge/packaging/)",
       "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-female-story-writing/.\" knowledge/writing/)",
-      "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-title-forging/.\" knowledge/title/)"
+      "Bash(cp -r \"/c/Users/Rowan/.claude/skills/duanju-title-forging/.\" knowledge/title/)",
+      "Bash(npx vitest *)",
+      "Bash(node *)",
+      "Bash(npm run *)",
+      "Bash(sed -n 6105,6150p D:/IdeaProject/duanju/node_modules/ai/dist/index.mjs)",
+      "Bash(sed -n 2715,2726p D:/IdeaProject/duanju/node_modules/ai/dist/index.d.ts)",
+      "Bash(npx tsx *)",
+      "Bash(npm view *)",
+      "Bash(cd /tmp)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npm pack *)",
+      "Bash(awk '{print $3}')",
+      "Bash(grep -oE \"[a-zA-Z0-9_./《》-]+$\")"
     ]
   }
 }
