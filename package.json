@@ -36,7 +36,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-name/duanju-cli.git"
+    "url": "git+https://github.com/rowani1/duanju.git"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
