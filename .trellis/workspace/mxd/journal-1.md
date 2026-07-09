@@ -45,3 +45,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: 自定义知识库覆盖功能 v0.2.0
+
+**Date**: 2026-07-09
+**Task**: 自定义知识库覆盖功能 v0.2.0
+**Branch**: `master`
+
+### Summary
+
+为 duanju-cli 新增自定义知识库按文件覆盖功能：loadKnowledgeEx 回落解析 + resolveKnowledgePath 三级配置链（CLI --knowledge > 项目 duanju.json > 全局配置，全局必须绝对路径）+ 五命令接入 + config 向导可选步骤 + README 新章节。176 测试全绿（既有 156 零改动）。主会话冒烟抓到 title 续传分支静默跳过路径校验的缺陷，TDD 修复并沉淀为 spec 规约（入口前置校验）。发布 duanju-cli@0.2.0 + GitHub v0.2.0 tag。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9469dcf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

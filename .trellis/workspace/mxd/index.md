@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
+- **Total Sessions**: 2
 - **Last Active**: 2026-07-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~47 | Active |
+| `journal-1.md` | ~80 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-07-09 | 自定义知识库覆盖功能 v0.2.0 | `9469dcf` | `master` |
 | 1 | 2026-07-09 | duanju CLI 从设计到发布 v0.1.1 | `a194dd2`, `0fda69f`, `c121080`, `c9e0aa6`, `0294bf7`, `4cf558b`, `75c66db`, `9e79614` | `master` |
 <!-- @@@/auto:session-history -->
 
