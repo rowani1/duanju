@@ -33,6 +33,11 @@ describe("createProject", () => {
     expect(readProject(dir).idea).toBe("替嫁:新娘?");
   });
 
+  it("截断后目录名不残留首尾标点", () => {
+    const dir = createProject("替嫁给残疾大佬冲喜，新婚夜他站起来了", tmpDir);
+    expect(path.basename(dir)).toBe("替嫁给残疾大佬冲喜");
+  });
+
   it("目录已存在时抛中文错误", () => {
     createProject("替嫁新娘", tmpDir);
     expect(() => createProject("替嫁新娘", tmpDir)).toThrow(/目录已存在/);

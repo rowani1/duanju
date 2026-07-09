@@ -149,9 +149,11 @@ export function sanitizeFileName(name: string): string {
     .replace(/^\.+|\.+$/g, "");
 }
 
-/** 目录名清洗：复用文件名清洗，取前 10 个字 */
+/** 目录名清洗：复用文件名清洗，取前 10 个字，并修剪首尾标点 */
+const EDGE_PUNCT =
+  /^[.,\-，。！？、；：…—·!?;:~'‘’“”（）()《》【】[\]]+|[.,\-，。！？、；：…—·!?;:~'‘’“”（）()《》【】[\]]+$/g;
 export function sanitizeProjectDirName(idea: string): string {
-  const cleaned = sanitizeFileName(idea).slice(0, 10).replace(/^\.+|\.+$/g, "");
+  const cleaned = sanitizeFileName(idea).slice(0, 10).replace(EDGE_PUNCT, "");
   return cleaned.length > 0 ? cleaned : "未命名项目";
 }
 
