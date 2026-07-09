@@ -1,6 +1,6 @@
 {
   "name": "duanju-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "短剧向女频短故事创作命令行工具：一句话题材 → 选题包装 → 书名锻造 → 逐章正文 → 投稿导出，内置总裁/古言/女频现实情感/年代穿越四大主类创作方法论，支持 OpenAI / Claude / Gemini / DeepSeek 等模型",
   "type": "module",
   "bin": {
